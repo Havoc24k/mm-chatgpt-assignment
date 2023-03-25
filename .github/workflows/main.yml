@@ -19,5 +19,5 @@ jobs:
           # Optional
           LANGUAGE: English
           MODEL: gpt-3.5-turbo
-          # top_p: 1
-          # temperature: 1
+          top_p: 1
+          temperature: 1
