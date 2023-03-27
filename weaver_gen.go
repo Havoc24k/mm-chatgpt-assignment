@@ -12,6 +12,20 @@ import (
 
 func init() {
 	codegen.Register(codegen.Registration{
+		Name:  "hello/Mathserve",
+		Iface: reflect.TypeOf((*Mathserve)(nil)).Elem(),
+		New:   func() any { return &mathserve{} },
+		LocalStubFn: func(impl any, tracer trace.Tracer) any {
+			return mathserve_local_stub{impl: impl.(Mathserve), tracer: tracer}
+		},
+		ClientStubFn: func(stub codegen.Stub, caller string) any {
+			return mathserve_client_stub{stub: stub, addMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "hello/Mathserve", Method: "Add"}), subMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "hello/Mathserve", Method: "Sub"})}
+		},
+		ServerStubFn: func(impl any, addLoad func(uint64, float64)) codegen.Server {
+			return mathserve_server_stub{impl: impl.(Mathserve), addLoad: addLoad}
+		},
+	})
+	codegen.Register(codegen.Registration{
 		Name:  "hello/Reverser",
 		Iface: reflect.TypeOf((*Reverser)(nil)).Elem(),
 		New:   func() any { return &reverser{} },
@@ -28,6 +42,45 @@ func init() {
 }
 
 // Local stub implementations.
+
+type mathserve_local_stub struct {
+	impl   Mathserve
+	tracer trace.Tracer
+}
+
+func (s mathserve_local_stub) Add(ctx context.Context, a0 int, a1 int) (r0 int, err error) {
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.tracer.Start(ctx, "main.Mathserve.Add", trace.WithSpanKind(trace.SpanKindInternal))
+		defer func() {
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+			}
+			span.End()
+		}()
+	}
+
+	return s.impl.Add(ctx, a0, a1)
+}
+
+func (s mathserve_local_stub) Sub(ctx context.Context, a0 int, a1 int) (r0 int, err error) {
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.tracer.Start(ctx, "main.Mathserve.Sub", trace.WithSpanKind(trace.SpanKindInternal))
+		defer func() {
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+			}
+			span.End()
+		}()
+	}
+
+	return s.impl.Sub(ctx, a0, a1)
+}
 
 type reverser_local_stub struct {
 	impl   Reverser
@@ -52,6 +105,124 @@ func (s reverser_local_stub) Reverse(ctx context.Context, a0 string) (r0 string,
 }
 
 // Client stub implementations.
+
+type mathserve_client_stub struct {
+	stub       codegen.Stub
+	addMetrics *codegen.MethodMetrics
+	subMetrics *codegen.MethodMetrics
+}
+
+func (s mathserve_client_stub) Add(ctx context.Context, a0 int, a1 int) (r0 int, err error) {
+	// Update metrics.
+	start := time.Now()
+	s.addMetrics.Count.Add(1)
+
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.stub.Tracer().Start(ctx, "main.Mathserve.Add", trace.WithSpanKind(trace.SpanKindClient))
+	}
+
+	defer func() {
+		// Catch and return any panics detected during encoding/decoding/rpc.
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+		err = s.stub.WrapError(err)
+
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			s.addMetrics.ErrorCount.Add(1)
+		}
+		span.End()
+
+		s.addMetrics.Latency.Put(float64(time.Since(start).Microseconds()))
+	}()
+
+	// Preallocate a buffer of the right size.
+	size := 0
+	size += 8
+	size += 8
+	enc := codegen.NewEncoder()
+	enc.Reset(size)
+
+	// Encode arguments.
+	enc.Int(a0)
+	enc.Int(a1)
+	var shardKey uint64
+
+	// Call the remote method.
+	s.addMetrics.BytesRequest.Put(float64(len(enc.Data())))
+	var results []byte
+	results, err = s.stub.Run(ctx, 0, enc.Data(), shardKey)
+	if err != nil {
+		return
+	}
+	s.addMetrics.BytesReply.Put(float64(len(results)))
+
+	// Decode the results.
+	dec := codegen.NewDecoder(results)
+	r0 = dec.Int()
+	err = dec.Error()
+	return
+}
+
+func (s mathserve_client_stub) Sub(ctx context.Context, a0 int, a1 int) (r0 int, err error) {
+	// Update metrics.
+	start := time.Now()
+	s.subMetrics.Count.Add(1)
+
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.stub.Tracer().Start(ctx, "main.Mathserve.Sub", trace.WithSpanKind(trace.SpanKindClient))
+	}
+
+	defer func() {
+		// Catch and return any panics detected during encoding/decoding/rpc.
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+		err = s.stub.WrapError(err)
+
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			s.subMetrics.ErrorCount.Add(1)
+		}
+		span.End()
+
+		s.subMetrics.Latency.Put(float64(time.Since(start).Microseconds()))
+	}()
+
+	// Preallocate a buffer of the right size.
+	size := 0
+	size += 8
+	size += 8
+	enc := codegen.NewEncoder()
+	enc.Reset(size)
+
+	// Encode arguments.
+	enc.Int(a0)
+	enc.Int(a1)
+	var shardKey uint64
+
+	// Call the remote method.
+	s.subMetrics.BytesRequest.Put(float64(len(enc.Data())))
+	var results []byte
+	results, err = s.stub.Run(ctx, 1, enc.Data(), shardKey)
+	if err != nil {
+		return
+	}
+	s.subMetrics.BytesReply.Put(float64(len(results)))
+
+	// Decode the results.
+	dec := codegen.NewDecoder(results)
+	r0 = dec.Int()
+	err = dec.Error()
+	return
+}
 
 type reverser_client_stub struct {
 	stub           codegen.Stub
@@ -113,6 +284,77 @@ func (s reverser_client_stub) Reverse(ctx context.Context, a0 string) (r0 string
 }
 
 // Server stub implementations.
+
+type mathserve_server_stub struct {
+	impl    Mathserve
+	addLoad func(key uint64, load float64)
+}
+
+// GetStubFn implements the stub.Server interface.
+func (s mathserve_server_stub) GetStubFn(method string) func(ctx context.Context, args []byte) ([]byte, error) {
+	switch method {
+	case "Add":
+		return s.add
+	case "Sub":
+		return s.sub
+	default:
+		return nil
+	}
+}
+
+func (s mathserve_server_stub) add(ctx context.Context, args []byte) (res []byte, err error) {
+	// Catch and return any panics detected during encoding/decoding/rpc.
+	defer func() {
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+	}()
+
+	// Decode arguments.
+	dec := codegen.NewDecoder(args)
+	var a0 int
+	a0 = dec.Int()
+	var a1 int
+	a1 = dec.Int()
+
+	// TODO(rgrandl): The deferred function above will recover from panics in the
+	// user code: fix this.
+	// Call the local method.
+	r0, appErr := s.impl.Add(ctx, a0, a1)
+
+	// Encode the results.
+	enc := codegen.NewEncoder()
+	enc.Int(r0)
+	enc.Error(appErr)
+	return enc.Data(), nil
+}
+
+func (s mathserve_server_stub) sub(ctx context.Context, args []byte) (res []byte, err error) {
+	// Catch and return any panics detected during encoding/decoding/rpc.
+	defer func() {
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+	}()
+
+	// Decode arguments.
+	dec := codegen.NewDecoder(args)
+	var a0 int
+	a0 = dec.Int()
+	var a1 int
+	a1 = dec.Int()
+
+	// TODO(rgrandl): The deferred function above will recover from panics in the
+	// user code: fix this.
+	// Call the local method.
+	r0, appErr := s.impl.Sub(ctx, a0, a1)
+
+	// Encode the results.
+	enc := codegen.NewEncoder()
+	enc.Int(r0)
+	enc.Error(appErr)
+	return enc.Data(), nil
+}
 
 type reverser_server_stub struct {
 	impl    Reverser
