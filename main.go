@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/ServiceWeaver/weaver"
 )
@@ -39,12 +40,30 @@ func main() {
 		fmt.Fprintf(w, "Hello, %s!\n", reversed)
 	})
 
-	http.HandleFunc("/reverse_2", func(w http.ResponseWriter, r *http.Request) {
-		reversed, err := reverser.Reverse(r.Context(), r.URL.Query().Get("name"))
+	// Get a client to the Reverser component.
+	mathserve, err := weaver.Get[Mathserve](root)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
+		num1, _ := strconv.Atoi(r.URL.Query().Get("num1"))
+		num2, _ := strconv.Atoi(r.URL.Query().Get("num2"))
+		num, err := mathserve.Add(r.Context(), num1, num2)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		fmt.Fprintf(w, "Hello, %s!\n", reversed)
+		fmt.Fprintf(w, "The answer is, %d!\n", num)
+	})
+
+	http.HandleFunc("/sub", func(w http.ResponseWriter, r *http.Request) {
+		num1, _ := strconv.Atoi(r.URL.Query().Get("num1"))
+		num2, _ := strconv.Atoi(r.URL.Query().Get("num2"))
+		num, err := mathserve.Sub(r.Context(), num1, num2)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		fmt.Fprintf(w, "The answer is, %d!\n", num)
 	})
 
 	http.Serve(lis, nil)
