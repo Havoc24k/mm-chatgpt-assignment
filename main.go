@@ -9,34 +9,6 @@ import (
 	"github.com/ServiceWeaver/weaver"
 )
 
-func Add(x, y int) int {
-	if x == 0 || y == 0 {
-		return 0
-	}
-
-	result := 0
-
-	for i := 0; i < x; i++ {
-		result += y
-	}
-
-	return result
-}
-
-func Sub(x, y int) int {
-	if x == 0 || y == 0 {
-		return 0
-	}
-
-	result := 0
-
-	for i := 0; i < x; i++ {
-		result -= y
-	}
-
-	return result
-}
-
 func main() {
 	// Get a network listener on address "localhost:12345".
 	root := weaver.Init(context.Background())
